@@ -1,0 +1,13 @@
+{
+  "name": "kiyo-slack-notify",
+  "version": "1.0.0",
+  "main": "app.js",
+  "author": "Kiyo Chinh",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "request": "^2.88.2"
+  }
+}
