@@ -1,0 +1,6 @@
+{
+    "slack_webhook": "",
+    "users": {
+        "GIT_USER": "SLACK_ID"
+    }
+}

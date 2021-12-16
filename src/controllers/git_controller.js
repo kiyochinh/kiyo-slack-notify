@@ -1,9 +1,8 @@
 const request = require('request')
-const users = require('../resources/slack_users.json')
 
-function pushNotify(payload) {
+function pushNotify(payload, slackWebhook) {
     const options = {
-        uri: process.env.SLACK_WEBHOOK,
+        uri: slackWebhook,
         method: 'POST',
         body: JSON.stringify(payload),
         headers: {
@@ -24,13 +23,12 @@ function getSlackUser(users, githubName, shouldGetId = false) {
         return user.name
 }
 
-function getMentionUsers(author) {
+function getMentionUsers(author, users) {
     var mentions = ""
     for (e in users) {
         if (author != e)
             mentions += "`<@" + users[e] + ">`,"
     }
-    console.log(mentions)
     return {
         "type": "section",
         "text": {
@@ -40,7 +38,7 @@ function getMentionUsers(author) {
     }
 }
 
-function pullRequestOpenedMessage(pullRequest) {
+function pullRequestOpenedMessage(pullRequest, users) {
     return {
         "blocks": [{
             "type": "section",
@@ -82,7 +80,7 @@ function pullRequestOpenedMessage(pullRequest) {
             }]
         }, {
             "type": "divider"
-        }, getMentionUsers(pullRequest.user.login), {
+        }, getMentionUsers(pullRequest.user.login, users), {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
@@ -103,7 +101,7 @@ function pullRequestOpenedMessage(pullRequest) {
     }
 }
 
-function pullRequestClosedMessage(pullRequest) {
+function pullRequestClosedMessage(pullRequest, users) {
     return {
         "blocks": [{
             "type": "section",
@@ -129,9 +127,9 @@ function formatMessage(body, users) {
     try {
         switch (body.action) {
             case 'opened':
-                return pullRequestOpenedMessage(body.pull_request)
+                return pullRequestOpenedMessage(body.pull_request, users)
             case 'closed':
-                return pullRequestClosedMessage(body.pull_request)
+                return pullRequestClosedMessage(body.pull_request, users)
             default:
                 return null
         }
@@ -140,28 +138,40 @@ function formatMessage(body, users) {
     }
 }
 
-module.exports = (() => {
-    const router = {}
-
-    router.webhook = (req, res) => {
-        try {
-            const payload = formatMessage(req.body, users)
-            if (payload) {
-                pushNotify(payload)
-                res.status(200).json({
-                    message: 'success'
-                })
-            } else {
-                res.status(500).json({
-                    message: 'failed'
-                })
-            }
-        } catch (error) {
-            console.log(error)
+function handleRequest(configs, req, res) {
+    try {
+        const payload = formatMessage(req.body, configs.users)
+        if (payload) {
+            pushNotify(payload, configs.slack_webhook)
+            res.status(200).json({
+                message: 'success'
+            })
+        } else {
             res.status(500).json({
                 message: 'failed'
             })
         }
+    } catch (error) {
+        res.status(500).json({
+            message: 'failed'
+        })
     }
+}
+
+module.exports = (() => {
+    const router = {}
+
+    router.hizaiOSWebhook = (req, res) => {
+       handleRequest(require('../resources/config_ios_hiza.json'), req, res)
+    }
+
+    router.hizaDevAllBEWebhook = (req, res) => {
+       handleRequest(require('../resources/config_dev_all_be_hiza.json'), req, res)
+    }
+
+    router.hizaDevAllAndroidWebhook = (req, res) => {
+       handleRequest(require('../resources/config_dev_all_android_hiza.json'), req, res)
+    }
+
     return router
 })()
